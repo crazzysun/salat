@@ -24,6 +24,8 @@
  */
 package com.novus.salat.util
 
+import java.util.concurrent._
+
 object `package` {
 
   val NonePlaceholder = "[None]"
@@ -32,6 +34,8 @@ object `package` {
   val NullPlaceholder = "[Null]"
   val EmptyPlaceholder = "[Empty]"
   val QuestionPlaceholder = "[???]"
+
+  val cache = new ConcurrentHashMap[(String, ClassLoader), Class[_]]
 
   val SalatThreads = new ThreadGroup("Salat")
   val DefaultSalatStackSize = 1024L * 1024
@@ -87,6 +91,14 @@ object `package` {
     builder.result
   }
 
+  private def refresh(clazz: String, classLoader: ClassLoader): Class[_] = {
+    if (!cache.contains((clazz, classLoader))) {
+      cache.put((clazz, classLoader), Class.forName(clazz, true, classLoader))
+    }
+
+    cache.get((clazz, classLoader))
+  }
+
   protected[salat] def resolveClass_!(c: String, classLoaders: Iterable[ClassLoader]): Class[_] = {
     val clazz = resolveClass(c, classLoaders)
     if (clazz.isDefined) clazz.get else sys.error("resolveClass: path='%s' does not resolve in any of %d available classloaders".format(c, classLoaders.size))
@@ -105,7 +117,8 @@ object `package` {
         val iter = many.iterator
         while (clazz == null && iter.hasNext) {
           try {
-            clazz = Class.forName(c, true, iter.next())
+            clazz = refresh(c, iter.next())
+            //clazz = Class.forName(c, true, iter.next())
           }
           catch {
             case e: ClassNotFoundException => // keep going, maybe it's in the next one
