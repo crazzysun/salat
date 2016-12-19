@@ -24,7 +24,7 @@
  */
 package com.novus.salat.util
 
-import java.util.concurrent._
+import java.util.concurrent.ConcurrentHashMap
 
 object `package` {
 
@@ -92,6 +92,7 @@ object `package` {
   }
 
   private def refresh(clazz: String, classLoader: ClassLoader): Class[_] = {
+    if (cache.size() == 0) println("refresh")
     if (!cache.contains((clazz, classLoader))) {
       cache.put((clazz, classLoader), Class.forName(clazz, true, classLoader))
     }
